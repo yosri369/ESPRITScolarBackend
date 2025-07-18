@@ -1,12 +1,15 @@
 package com.example.user.service;
 
 import com.example.user.entity.*;
+import com.example.user.repository.PendingTeacherRepository;
 import com.example.user.repository.RoleRepository;
 import com.example.user.repository.StudentRepository;
 import com.example.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService; // ✅ Inject
+    private final PendingTeacherRepository pendingTeacherRepository;
 
 
     /**
@@ -79,4 +83,53 @@ public class UserService {
         System.out.println("   Email: " + email);
         System.out.println("   Password: CIN");
     }
+
+    public void createTeacherFromPending(PendingTeacher pendingTeacher) {
+        String universityEmail = pendingTeacher.getFirstName().toLowerCase() + "." +
+                pendingTeacher.getLastName().toLowerCase() + "@esprit.com";
+
+        String cin = pendingTeacher.getCin();
+        String registrationNumber = "TEA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String rawPassword = cin;
+
+        User user = new User();
+        user.setUsername(registrationNumber);         // Username = registrationNumber
+        user.setEmail(universityEmail);               // System email
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setFirstname(pendingTeacher.getFirstName());
+        user.setLastname(pendingTeacher.getLastName());
+        user.setBirthdate(pendingTeacher.getDateEmbauche()); // or another date field
+        user.setGender("N/A"); // if missing
+        user.setPhone(pendingTeacher.getPhone());
+        user.setAddress(pendingTeacher.getAddress());
+        user.setCin(cin);
+        user.setActive(true);
+
+        Role teacherRole = roleRepository.findByRoleType(RoleType.TEACHER)
+                .orElseThrow(() -> new RuntimeException("Role TEACHER not found"));
+        user.setRole(teacherRole);
+
+        Teacher teacher = new Teacher();
+        teacher.setUser(user);
+        teacher.setDateEmbauche(pendingTeacher.getDateEmbauche());
+        teacher.setGrade(pendingTeacher.getGrade());
+        teacher.setSpeciality(pendingTeacher.getSpeciality());
+        teacher.setFullTime(pendingTeacher.isFullTime());
+
+        user.setTeacherProfile(teacher);
+
+        userRepository.save(user);
+
+        emailService.sendTeacherAccountInfoEmail(
+                pendingTeacher.getEmail(),     // personal email
+                universityEmail,               // system esprit email
+                registrationNumber,            // username
+                rawPassword                    // password = CIN
+        );
+
+        pendingTeacherRepository.delete(pendingTeacher);
+
+        System.out.println("✅ Teacher account created: " + universityEmail);
+    }
+
 }

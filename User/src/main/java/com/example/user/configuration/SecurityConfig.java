@@ -34,6 +34,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/pending-students").permitAll()  // Allow public POST to create pending student
+                        .requestMatchers(HttpMethod.POST, "/api/pending-teachers").permitAll() // teacher registration form
+
+                        .requestMatchers("/api/pending-students/**").hasRole("ADMIN")          // view/validate/reject pending students
+                        .requestMatchers("/api/pending-teachers/**").hasRole("ADMIN")          // view/validate/reject pending teachers
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(" /api/test/**").hasRole("STUDENT")
 

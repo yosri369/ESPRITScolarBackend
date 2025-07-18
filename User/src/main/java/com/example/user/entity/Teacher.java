@@ -15,7 +15,7 @@ public class Teacher {
     private LocalDate dateEmbauche;
     private String grade;
     private String speciality;
-    private boolean isFullTime;
+    private boolean fullTime;
     @OneToOne
     @JoinColumn(name = "user_id")
     private User user;
